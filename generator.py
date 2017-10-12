@@ -22,6 +22,13 @@ class CookiesGenerator(object):
         self.account_db = AccountRedisClient(name=self.name,db=db)
         self.browser_type = browser_type
 
+    def run(self):
+        '''
+        运行得到所有账户并依次登陆
+        :return: 
+        '''
+
+
     def _browser(self,browser_type):
         '''
         通过browser_type判断使用的浏览器
@@ -54,6 +61,7 @@ class CookiesGenerator(object):
         print(accounts)
 
     def _get_cookie(self,username):
+
         wait = WebDriverWait(self.browser,5)
         success = wait.until(EC.visibility_of_all_elements_located((By.CLASS_NAME,'me_portrait_w')))
         if success:
@@ -61,7 +69,6 @@ class CookiesGenerator(object):
             self.browser.get('http://weibo.cn/')
             if '我的首页' in self.browser.title:
                 c = self.browser.get_cookies()
-                print(c)
                 cookies = {}
                 for cookie in c:
                     cookies[cookie['name']] = cookie['value']
@@ -70,40 +77,55 @@ class CookiesGenerator(object):
                 return (username, json.dumps(cookies))
 
 
+    def _yzm(self,username):
+        yzm = self.wait.until(EC.visibility_of_element_located((By.XPATH, '/html/body/div[6]/div[2]/ul/li[4]/img')))
+        yzm_url = yzm.get_attribute('src')
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36'
+        }
+        r = requests.get(yzm_url, cookies=self.cookies_dict, headers=headers)
+        with open(username + '.png', 'wb') as p:
+            p.write(r.content)
+        t = input('请输入验证码：')
+        self.browser.find_element_by_xpath('/html/body/div[6]/div[2]/ul/li[4]/input').send_keys(t)
+        submit = self.wait.until(EC.visibility_of_element_located((By.XPATH, '/html/body/div[6]/div[2]/ul/li[6]/span/a')))
+        submit.click()
+        try:
+            result = self._get_cookie(username)
+            if result:
+                return result
+        except:
+            print('登陆失败，重新输入验证码')
+            return self._yzm(username)
+
     def get_cookies(self,username,password):
         print('Generating Cookies of ',username)
         # self.browser.get('http://my.sina.com.cn/profile/unlogin')
         self.browser.delete_all_cookies()
-        self.browser.get('https://login.sina.com.cn/signup/signin.php')
+        self.browser.get('http://my.sina.com.cn/profile/unlogin')
+        self.wait = WebDriverWait(self.browser,600)
         try:
-            self.browser.find_element_by_xpath('//*[@id="username"]').clear()
-            self.browser.find_element_by_xpath('//*[@id="username"]').send_keys(username)
-            self.browser.find_element_by_xpath('//*[@id="password"]').clear()
-            self.browser.find_element_by_xpath('//*[@id="password"]').send_keys(password)
-            self.browser.find_element_by_xpath('//*[@id="vForm"]/div[2]/div/ul/li[7]/div[1]/input').click()
+            login = self.wait.until(EC.visibility_of_element_located((By.XPATH,'//*[@id="hd_login"]')))
+            login.click()
+            user = self.wait.until(EC.visibility_of_element_located((By.XPATH,'/html/body/div[6]/div[2]/ul/li[2]/input')))
+            user.send_keys(username)
+            psd = self.wait.until(EC.visibility_of_element_located((By.XPATH,'/html/body/div[6]/div[2]/ul/li[3]/input')))
+            psd.send_keys(password)
+            submit = self.wait.until(EC.visibility_of_element_located((By.XPATH,'/html/body/div[6]/div[2]/ul/li[6]/span/a')))
+            submit.click()
             try:
                 result = self._get_cookie(username)
                 if result:
                     return result
             except TimeoutException:
                 print('出现验证码，开始识别')
-                img_url = self.browser.find_element_by_xpath('//*[@id="check_img"]').get_attribute('src')
-                img_cookies = self.browser.get_cookies()
-                cookies_dict = {}
-                for cookie in img_cookies:
-                    cookies_dict[cookie['name']] = cookie['value']
-                print(cookies_dict)
-                r = requests.get(img_url,cookies=cookies_dict)
-                with open(username+'.png','wb') as p:
-                    p.write(r.content)
-                # image = Image.open(username+'.png')
-                # image.show()
-                t = input('请输入验证码：')
-                self.browser.find_element_by_xpath('//*[@id="door"]').send_keys(t)
-                self.browser.find_element_by_xpath('//*[@id="vForm"]/div[2]/div/ul/li[7]/div[1]/input').click()
-                result = self._get_cookie(username)
-                if result:
-                    return result
+                yzm = self.wait.until(EC.visibility_of_element_located((By.XPATH,'/html/body/div[6]/div[2]/ul/li[4]/img')))
+                yzm_url = yzm.get_attribute('src')
+                cookies = self.browser.get_cookies()
+                self.cookies_dict = {}
+                for cookie in cookies:
+                    self.cookies_dict[cookie['name']] = cookie['value']
+                return self._yzm(username)
         except WebDriverException as e:
             print(e.args)
 
@@ -112,7 +134,8 @@ class CookiesGenerator(object):
 
 
 
+
 if __name__ == '__main__':
     generator = CookiesGenerator(name='weibo',db=3)
-    generator._browser('Chrome')
+    generator._browser('PhantomJS')
     generator.get_cookies('15173492987','688458ps')
