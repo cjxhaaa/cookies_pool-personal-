@@ -1,4 +1,5 @@
 import redis
+import random
 from error import *
 
 
@@ -107,7 +108,61 @@ class AccountRedisClient(RedisClient):
 
     def delete(self,key):
         try:
+            print('删除用户：',key)
             return self._db.delete(self._key(key))
         except:
             raise DeleteAccountError
 
+class CookiesRedisClient(RedisClient):
+    def __init__(self,host=REDIS_HOST,port=REDIS_PORT,password=REDIS_PASSWORD,domain='cookies',name='default',db=0):
+        super().__init__(host,port,password,db)
+        self.domain = domain
+        self.name = name
+
+    def set(self,key,value):
+        try:
+            return self._db.set(self._key(key),value)
+        except:
+            raise SetAccountError
+
+    def get(self,key):
+        try:
+            return self._db.get(self._key(key)).decode('utf-8')
+        except:
+            raise GetAccountError
+
+    def get_random(self):
+        '''
+        随机获取一个cookie
+        :return: 
+        '''
+        try:
+            keys = self.keys()
+            return self._db.get(random.choice(keys))
+        except:
+            raise  GetRandomCookieError
+
+    def all(self):
+        '''
+        获取所有账户，返回字典
+        :return: 
+        '''
+        try:
+            for key in self._db.keys('{domain}:{name}:*'.format(domain=self.domain,name=self.name)):
+                group = key.decode('utf-8').split(':')
+                if len(group) == 3:
+                    username = group[2]
+                    yield {
+                        'username':username,
+                        'password':self.get(username)
+                    }
+        except Exception as e:
+            print(e.args)
+            raise GetAllCookieError
+
+    def delete(self,key):
+        try:
+            print('删除Cookies：',key)
+            return self._db.delete(self._key(key))
+        except:
+            raise DeleteAccountError
