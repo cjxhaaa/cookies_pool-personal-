@@ -1,13 +1,8 @@
 import redis
 import random
 from error import *
+from config import *
 
-
-REDIS_HOST = '127.0.0.1'
-REDIS_PORT = 6379
-REDIS_PASSWORD = 'foobared'
-REDIS_DOMAIN = '*'
-REDIS_NAME = '*'
 
 class RedisClient(object):
     def __init__(self, host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD,db=0):
@@ -166,3 +161,10 @@ class CookiesRedisClient(RedisClient):
             return self._db.delete(self._key(key))
         except:
             raise DeleteAccountError
+
+    def count(self):
+        """
+        获取当前Cookies数目
+        :return: 数目
+        """
+        return len(self.keys())

@@ -1,19 +1,19 @@
 import json
 import requests
 import os,time
+import easygui
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException,WebDriverException
 from redis_db import AccountRedisClient,CookiesRedisClient
-from PIL import Image
+from config import *
 
 
-DEFAULT_BROWSER = 'Chrome'
 
 class CookiesGenerator(object):
-    def __init__(self,name='default',browser_type=DEFAULT_BROWSER,db=0):
+    def __init__(self,name='default',browser_type=DEFAULT_BROWSER,db=REDIS_DB):
         '''
         初始化浏览器对象
         :param name: 名称
@@ -85,7 +85,7 @@ class CookiesGenerator(object):
             p.write(r.content)
         login_status = self.browser.find_element_by_xpath('/html/body/div[6]/div[2]/p')
         print('登录状态：' + login_status.text)
-        t = input('请输入验证码，输入next跳过此账号：')
+        t = easygui.enterbox(msg='请输入验证码，输入next跳过此账号：',title='验证码')
         if  t == 'next':
             print('next')
             return
