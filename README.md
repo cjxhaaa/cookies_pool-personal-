@@ -1,6 +1,6 @@
 # cookies_pool
 
-个人建立的新浪登陆cookies池（可扩展），使用redis数据库，flask开发api接口
+个人建立的新浪登陆cookies池（可扩展），使用redis数据库，selenium登陆,flask实现api接口
 
 # 安装
 
